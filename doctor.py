@@ -52,17 +52,9 @@ def diagnose(choice='auto'):
                 continue
         add(name+'.signal', 'ok' if newest else 'warning',
             f'Last local signal {int(time.time()-newest)} seconds ago; not proof of a current live connection.' if newest else 'No received signal. Check after actual compaction; absence before first use is normal.')
-    from pet_assets import candidates
+    from pet_assets import has_local_asset
     PETS = ['codex', 'dewey', 'fireball', 'hoots', 'rocky', 'seedy', 'stacky', 'bsod', 'null-signal']
-    found = 0
-    for pet in PETS:
-        for path in candidates(pet):
-            try:
-                if path.is_file():
-                    found += 1
-                    break
-            except OSError:
-                pass
+    found = sum(has_local_asset(pet) for pet in PETS)
     add('pet_files', 'ok' if found else 'warning', f'{found}/{len(PETS)} local candidates found; decoding not checked here. Missing/invalid files use robots.')
     return checks
 

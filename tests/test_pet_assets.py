@@ -1,13 +1,44 @@
 from pathlib import Path
 import tempfile
+import struct
+import json
+import io
 import tkinter as tk
 import unittest
 from unittest.mock import patch
 
-from pet_assets import candidates, load_sheet
+from pet_assets import candidates, load_sheet, desktop_bytes
 
 
 class PetAssetsTests(unittest.TestCase):
+    def setUp(self):
+        patcher = patch('pet_assets.desktop_archives', return_value=())
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_desktop_v2_atlas_and_truncated_archive(self):
+        from PIL import Image
+        raw = io.BytesIO()
+        Image.new('RGBA', (1536, 2288), (90, 100, 150, 255)).save(raw, format='WEBP', lossless=True)
+        data = raw.getvalue()
+        header = json.dumps({'files': {'webview': {'files': {'assets': {'files': {
+            'codex-spritesheet-v6-test.webp': {'size': len(data), 'offset': '0'}
+        }}}}}}).encode()
+        packed = struct.pack('<4I', 4, len(header)+8, len(header)+4, len(header))+header+data
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory); archive=root/'app.asar';archive.write_bytes(packed)
+            with patch('pet_assets.desktop_archives', return_value=(archive,)):
+                self.assertEqual(next(desktop_bytes('codex')), data)
+                self.assertEqual(list(desktop_bytes('dewey')), [])
+                window=tk.Tk();window.withdraw()
+                try:
+                    sheet=load_sheet('codex',window,root,root)
+                    self.assertEqual((sheet.width(),sheet.height()),(1536,2288))
+                finally:
+                    window.destroy()
+                archive.write_bytes(packed[:-100])
+                self.assertEqual(list(desktop_bytes('codex')), [])
+
     def test_environment_root(self):
         with patch.dict('os.environ', {'CODEX_HOME': 'custom-codex'}):
             self.assertEqual(candidates('dewey')[1],

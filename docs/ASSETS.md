@@ -21,11 +21,17 @@
 1. 앱 폴더의 `assets/<id>.png` (기존 로컬 사용 호환)
 2. `CODEX_HOME/cache/tui-pets/v1/assets/<id>-spritesheet-v4.webp`
 3. 같은 Codex 캐시 경로의 PNG 파일
+4. Windows의 현재 사용자에게 설치된 `OpenAI.Codex` 패키지의 `app/resources/app.asar` 내부 펫 이미지
+
+데스크톱 설치 위치는 Windows 패키지 조회로 알아내며 버전·사용자 경로를 고정하지 않습니다.
+ASAR 헤더와 해당 펫 바이트만 읽어 메모리에서 표시하며 파일을 추출·저장하지 않습니다.
+1536×1872 및 1536×2288 아틀라스를 지원합니다. 최신 규격의 추가 시선 행은 현재 연출에 사용하지 않습니다.
+패키지 조회·파일 읽기가 거부되거나 번들 구조가 바뀌면 다른 로컬 후보 또는 로봇으로 대체합니다.
 
 `CODEX_HOME` 미설정 시 사용자 홈의 `.codex`를 사용합니다.
 [공식 캐시 경로 소스](https://github.com/openai/codex/blob/main/codex-rs/tui/src/pets/asset_pack.rs)를 기준으로 구현했습니다.
 CLI 설치만으로 모든 펫이 저장되는 것은 아닙니다. 해당 CLI가 펫 사용 시 다운로드한 파일이 있어야 합니다.
-공식 CLI 카탈로그에 없는 Hoots 등은 해당 파일이 없으면 로봇으로 표시됩니다.
+Hoots처럼 CLI에 없는 펫도 데스크톱 번들에 있으면 표시됩니다.
 
 WebP를 읽으려면 `python -m pip install -r requirements.txt`로 Pillow를 설치하세요.
 이미지 없음, 읽기 권한 없음, 손상, 크기 불일치, Pillow 미설치 시 해당 펫만 로봇으로 표시합니다.
@@ -35,7 +41,7 @@ Codex 캐시의 원본 파일을 수정하거나 앱 폴더로 복사하지 않�
 
 ## 이미지 형식
 
-`assets/<id>.png`를 사용하는 기존 렌더러입니다. 1536×1872, 8열×9행, 셀 192×208 픽셀.
+`assets/<id>.png`를 사용하는 기존 렌더러입니다. 1536×1872 또는 1536×2288, 8열×9행 또는 11행, 셀 192×208 픽셀.
 ID: `codex`, `dewey`, `fireball`, `hoots`, `rocky`, `seedy`, `stacky`, `bsod`, `null-signal`.
 본인에게 사용 권한이 있는 파일을 로컬에서 배치할 수 있습니다. 이 방법이 별도 사용 허가를 제공하는 것은 아닙니다.
 앱이 이미지를 자동 다운로드하지 않으며 `assets/`는 Git 제외 대상입니다.

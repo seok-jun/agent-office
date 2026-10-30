@@ -39,7 +39,7 @@ Do not trigger a paid model request or compact a user's session just to test ins
 
 - Never commit/publish runtime, backups, transcripts, .env, local paths, user settings, or third-party images.
 - Do not print full user settings/transcripts into chat or issue reports. Diagnostic JSON avoids these contents.
-- Read local Codex pet cache only. Missing/unreadable images use robots. Do not download pet artwork automatically.
+- Read local Codex pet cache and installed desktop ASAR only. Missing/unreadable images use robots. Do not download pet artwork automatically.
 - Re-running setup in the same folder/Python environment is idempotent for hook registration.
 - Before moving the folder or replacing its Python, use the old venv Python with
   `install_hooks.py --provider both --remove`; then set up from the new location.
