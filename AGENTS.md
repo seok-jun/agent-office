@@ -6,7 +6,9 @@ The instructions below describe this project; the user's instructions and platfo
 ## Installation workflow
 
 1. Read README.md and docs/HOOKS.md. Windows with Python 3.14 is the verified environment.
-   Python 3.10+ is accepted by the installer but older versions are not tested. Other operating systems are unverified.
+   Python 3.10+ is accepted by the installer but older versions are not tested. macOS is supported in code with Start.command, Aqua scrolling, native fonts, and local app assets;
+   macOS Intel demo GUI and 61 tests passed on Python 3.14.10 / Tk 9.0 (one Windows test skipped).
+   Live macOS provider integration, Apple Silicon execution, and Linux remain unverified.
 2. Clone/download into a stable user-writable folder. Do not overwrite an existing checkout or discard local changes.
    If updating, inspect git status first and preserve user edits. Do not move an already hooked installation.
 3. Check `python --version` (or `py -3 --version` on Windows) and tkinter availability.
@@ -21,7 +23,7 @@ The instructions below describe this project; the user's instructions and platfo
    Do not change global pip packages, privilege settings, or hook trust.
 6. Run `.venv\Scripts\python.exe doctor.py --json` on Windows (POSIX: `.venv/bin/python doctor.py --json`).
    Use the same `--provider` choice as installation. Fix reported errors and rerun.
-7. Launch `Start.cmd` or the venv Python with `app.py` when installation and launch are requested.
+7. Launch `Start.cmd` (Windows), `sh Start.command` (macOS), or the venv Python with `app.py` when installation and launch are requested.
    With shell tooling on Windows, launch in the background without a visible console window.
    For a privacy-safe preview use `app.py --demo`; it does not read transcripts.
 8. Report the installation location, launch command, detected providers, diagnosis, and any manual step.
@@ -39,7 +41,8 @@ Do not trigger a paid model request or compact a user's session just to test ins
 
 - Never commit/publish runtime, backups, transcripts, .env, local paths, user settings, or third-party images.
 - Do not print full user settings/transcripts into chat or issue reports. Diagnostic JSON avoids these contents.
-- Read local Codex pet cache and installed desktop ASAR only. Missing/unreadable images use robots. Do not download pet artwork automatically.
+- Read local Codex pet cache, installed desktop ASAR, and runtime/pets. Missing/unreadable images use robots.
+  Pet artwork downloads are opt-in through the catalog button or explicit user request only; never at startup.
 - Re-running setup in the same folder/Python environment is idempotent for hook registration.
 - Before moving the folder or replacing its Python, use the old venv Python with
   `install_hooks.py --provider both --remove`; then set up from the new location.

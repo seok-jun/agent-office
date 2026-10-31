@@ -4,7 +4,8 @@ Claude Code와 Codex의 로컬 작업 상태를 도트 사무실로 보여주는
 작업 중에는 책상으로, 질문·승인 대기에는 내 자리 앞으로, 압축 중에는 커피 코너로 이동합니다.
 
 GitHub에는 코드만 배포합니다. 시작할 때 **PC에 있는 Codex 펫 이미지를 자동 탐색**하고,
-찾지 못한 펫만 로봇으로 표시합니다. 외부 이미지를 배포본에 넣거나 자동 다운로드하지 않습니다.
+찾지 못한 펫만 로봇으로 표시합니다. 외부 이미지는 배포본에 포함하지 않습니다.
+`펫 도감 → 기본 펫 8종 받기`를 누르면 공식 Codex CDN에서 이미지를 받을 수 있습니다.
 [이미지 탐색 안내](docs/ASSETS.md)
 
 ## 에이전트에게 설치 맡기기
@@ -24,7 +25,7 @@ python setup_office.py
 ## 수동 빠른 시작 — Windows
 
 1. Python 3.14와 tkinter를 설치합니다. 개발·실행 확인 환경은 Windows / Python 3.14입니다.
-   다른 Python 3 버전과 macOS/Linux는 아직 검증하지 않았습니다.
+   Python 3.10 이상을 지원 대상으로 하며 Linux는 아직 검증하지 않았습니다.
 2. 저장소 ZIP을 내려받아 **압축을 풉니다**. Git을 사용한다면 아래 명령으로 받습니다.
 
    ```powershell
@@ -56,6 +57,35 @@ python app.py --demo
 가상의 12개 세션만 표시하며 로컬 세션 기록을 읽지 않습니다.
 이 모드에서는 실시간 모드로 전환하지 않습니다. 실제 연결은 앱을 닫고 `python app.py`로 실행하세요.
 일반 실행 중의 `시연 보기` 버튼은 화면만 전환하며 백그라운드 모니터링은 계속됩니다.
+
+## 빠른 시작 — macOS
+
+Python 3.10 이상과 tkinter가 필요합니다. python.org의 macOS Python 설치본처럼
+tkinter를 포함한 배포판을 사용하세요. `python3 -m tkinter`로 확인할 수 있습니다.
+Apple Silicon과 Intel 모두 같은 Python 코드와 실행 파일을 사용합니다.
+macOS Intel / Python 3.14.10 / Tk 9.0에서 테스트 61개 통과(Windows 전용 1개 생략)와
+시연 GUI 실행·종료를 확인했습니다. 실제 공급자 연결과 Apple Silicon 실행은 아직 검증하지 않았습니다.
+
+저장소를 내려받아 압축을 풀거나 clone한 뒤 해당 폴더에서 실행합니다.
+
+```sh
+python3 setup_office.py --dry-run
+python3 setup_office.py
+.venv/bin/python doctor.py --json
+sh Start.command
+```
+
+Finder에서 더블 클릭하려면 최초 한 번 `chmod +x Start.command`를 실행하세요.
+이미 실행 권한이 있는 checkout에서는 바로 더블 클릭할 수 있습니다.
+실행 파일은 현재 폴더와 관계없이 앱 폴더로 이동하고 `.venv/bin/python`을 우선 사용합니다.
+공급자 설정을 바꾸지 않고 구경하려면 `python3 app.py --demo`를 실행하세요.
+네트워크 없이 설치하려면 `python3 setup_office.py --robot-only`를 사용합니다.
+
+맥에서는 한글 UI에 Apple SD Gothic Neo, 고정폭 텍스트에 Menlo를 사용하고,
+트랙패드 스크롤을 지원합니다. 펫 이미지는 CLI 캐시와
+`/Applications/Codex.app`, `~/Applications/Codex.app`의 로컬 ASAR에서 읽습니다.
+Finder에서 실행한 앱에는 터미널에서 설정한 환경변수가 전달되지 않을 수 있습니다.
+사용자 지정 로그 경로가 필요하면 같은 터미널에서 환경변수를 설정하고 `sh Start.command`로 실행하세요.
 
 ## 실제 세션 연결
 
@@ -101,7 +131,7 @@ Claude의 Clawd는 헤드셋·안경·후드·베레모 등 12종 옷차림으�
 - 기록에 명시된 요청과 상태만 감지합니다. 모든 앱 버전의 승인 UI나 내부 압축을 감지한다고 보장하지 않습니다.
 - 기록 갱신이 3분 이상 없으면 상태 미확인, 1시간 비활동이면 대기로 표시할 수 있습니다.
 - 로컬 파일명·프로젝트명·공개 진행 문구·질문 요약이 화면에 보일 수 있습니다. 공유 화면은 `--demo`를 사용하세요.
-- 별도 네트워크 전송·분석 수집·API 호출은 없습니다. 프롬프트나 내부 추론을 표시하도록 설계하지 않았습니다.
+- 사용자가 펫 다운로드 버튼을 누르면 공식 이미지 CDN에 접속합니다. 세션 기록 전송·분석 수집·모델 API 호출은 없습니다. 프롬프트나 내부 추론을 표시하도록 설계하지 않았습니다.
 - 훅은 세션 ID·기록 경로·이벤트 시각을 `runtime/compaction`에 기록합니다.
   설치 백업은 `runtime/backups`에 있으며 기존 설정 전체가 들어갈 수 있습니다. `runtime`은 공개하지 마세요.
 
@@ -130,7 +160,8 @@ python -m unittest discover -s tests -v
 
 ## English quick start
 
-A local desktop pixel office for Claude Code and Codex. Tested on Windows with Python 3.14 and tkinter.
+A local desktop pixel office for Claude Code and Codex. Windows and macOS support with Python 3.10+ and tkinter; verified on Windows with Python 3.14.
+On macOS, run `python3 setup_office.py` and `sh Start.command`. macOS Intel demo GUI and 61 tests passed on Python 3.14.10 / Tk 9.0; live provider integration and Apple Silicon remain unverified.
 Extract the source folder and run `python app.py`, or `python app.py --demo` for fictional sessions without reading local logs.
 No API key is required. Install `requirements.txt` to read local WebP pet sprites; robots work without it. Live compaction uses optional hooks; see [setup](docs/HOOKS.md).
 Artwork is not bundled. Existing Codex CLI pet sprites are read locally; missing or unreadable sprites fall back to robots.

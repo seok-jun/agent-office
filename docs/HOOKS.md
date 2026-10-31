@@ -64,3 +64,11 @@ python install_hooks.py --provider both --remove
 - [Claude Code hooks](https://code.claude.com/docs/en/hooks)
 
 훅은 stdin의 JSON에서 식별자와 이벤트만 저장하며 stdout에 승인 결정이나 모델 지시를 반환하지 않습니다.
+
+## macOS 명령
+
+설치 후 `.venv/bin/python install_hooks.py --provider Codex --preview`와
+`.venv/bin/python install_hooks.py --provider Codex`를 사용합니다.
+Codex의 POSIX 명령은 각 인자를 셸 인용하여 공백·한글·특수문자를 보호합니다.
+Claude 명령은 실행 파일과 인자 배열을 별도로 전달합니다.
+Codex `/hooks`의 사용자 신뢰 확인과 세션 재시작 절차는 동일합니다.

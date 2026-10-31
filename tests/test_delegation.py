@@ -65,7 +65,8 @@ class DelegationTests(unittest.TestCase):
             at = time.time()
             command = f'S="{root.as_posix()}"; codex exec --json -o "$S/final.md" - < "$S/prompt.md" > "$S/events.jsonl" 2> "$S/errors.jsonl"'
             links.consume(call(command, at), at)
-            self.assertEqual(links.calls['call-1']['outputs'], [header])
+            # macOS /var is a symlink to /private/var; compare canonical paths.
+            self.assertEqual(links.calls['call-1']['outputs'], [header.resolve()])
             links.refresh()
             self.assertFalse(links.links)
             header.write_text(json.dumps({'type': 'thread.started', 'thread_id': CHILD})+'\n')

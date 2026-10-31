@@ -60,7 +60,8 @@ def main():
         merge_config(config, name)
     for name in selected:
         subprocess.run([str(executable), str(APP/'install_hooks.py'), '--provider', name], check=True)
-    print('Installation complete. Start.cmd or the .venv Python can launch app.py.')
+    launcher = 'Start.cmd' if os.name == 'nt' else 'Start.command'
+    print(f'Installation complete. {launcher} or the .venv Python can launch app.py.')
     if 'Codex' in selected:
         print('User action: review and trust these hooks in Codex /hooks. Trust is not automated.')
     if selected:

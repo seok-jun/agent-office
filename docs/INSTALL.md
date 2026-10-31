@@ -63,3 +63,23 @@ Python, 가상환경, tkinter, Pillow, 로그 폴더, 훅 정의 일치, 마지�
 ```
 
 그 뒤 새 위치에서 설치하세요. 자세한 백업·신뢰·제거 규칙은 [HOOKS.md](HOOKS.md)에 있습니다.
+
+## macOS 설치·진단·제거
+
+Python 3.10+와 tkinter를 준비한 뒤 실행합니다. `python3 -m tkinter`로 GUI 환경을 확인하세요.
+
+```sh
+python3 setup_office.py --dry-run
+python3 setup_office.py
+.venv/bin/python doctor.py --json
+sh Start.command
+```
+
+Finder 더블 클릭용 실행 권한이 없으면 `chmod +x Start.command`를 한 번 실행하세요.
+공급자 옵션과 훅 신뢰 절차는 Windows와 같습니다. 사용자 지정 환경변수가 필요하면 터미널에서 실행합니다.
+업데이트는 같은 폴더에서 `python3 setup_office.py`로 진행합니다. 이동·제거 전에는 다음을 실행하세요.
+
+```sh
+.venv/bin/python install_hooks.py --provider both --remove --preview
+.venv/bin/python install_hooks.py --provider both --remove
+```

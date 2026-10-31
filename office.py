@@ -4,6 +4,7 @@ import heapq
 import math
 import random
 import tkinter as tk
+from ui_platform import Button, Checkbutton, UI_FONT, MONO_FONT
 import time
 from pet_assets import load_sheet
 from companions import robot_frame
@@ -58,43 +59,49 @@ class Office(Routines):
                 cy=bottom+(head-bottom)*fraction
                 self.canvas.create_oval(self.ox+(cx-radius)*self.scale,self.oy+(cy-radius)*self.scale,self.ox+(cx+radius)*self.scale,self.oy+(cy+radius)*self.scale,fill=fill,outline=border,tags='moving')
             cloud(0,0,fill,border)
-            self.canvas.create_text(self.ox+(left+width/2)*self.scale,self.oy+(top+height/2)*self.scale,text=message,fill='#756581' if sleeping else '#526e5c',font=('Malgun Gothic',max(8,int(9*self.scale))),width=(width-22)*self.scale,justify='center',tags='moving')
+            self.canvas.create_text(self.ox+(left+width/2)*self.scale,self.oy+(top+height/2)*self.scale,text=message,fill='#756581' if sleeping else '#526e5c',font=(UI_FONT,max(8,int(9*self.scale))),width=(width-22)*self.scale,justify='center',tags='moving')
 
     def pet_catalog(self):
         window=tk.Toplevel(self.root)
         window.title('펫 도감 · 9 companions')
         window.configure(bg='#192231')
         window.resizable(False,False)
-        tk.Label(window,text='MEET YOUR LITTLE TEAM',font=('Consolas',18,'bold'),bg='#192231',fg='#e9eee7').grid(row=0,column=0,columnspan=3,padx=30,pady=(22,5))
-        tk.Label(window,text='같은 세션은 같은 펫 · 로컬 이미지가 없으면 로봇 표시',font=('Malgun Gothic',10),bg='#192231',fg='#96a9b5').grid(row=1,column=0,columnspan=3,pady=(0,15))
+        self.catalog_images = []
+        tk.Label(window,text='MEET YOUR LITTLE TEAM',font=(MONO_FONT,18,'bold'),bg='#192231',fg='#e9eee7').grid(row=0,column=0,columnspan=3,padx=30,pady=(22,5))
+        tk.Label(window,text='같은 세션은 같은 펫 · 로컬 이미지가 없으면 로봇 표시',font=(UI_FONT,10),bg='#192231',fg='#96a9b5').grid(row=1,column=0,columnspan=3,pady=(0,15))
         for i,pet in enumerate(PETS):
             tile=tk.Frame(window,bg='#263643',width=172,height=132)
             tile.grid(row=2+i//3,column=i%3,padx=9,pady=9)
             tile.grid_propagate(False)
-            tk.Label(tile,image=self.pet_frame(pet,0,0,False),bg='#263643').pack(pady=(12,2))
-            tk.Label(tile,text=NAMES[i],bg='#263643',fg='#d7e6ce',font=('Consolas',12,'bold')).pack(padx=44,pady=(0,10))
-        tk.Button(window,text='Clawd 옷장 · 12종 보기',command=self.clawd_catalog,bg='#2b394a',fg='#e9eee7',relief='flat',padx=15,pady=8).grid(row=5,column=0,columnspan=3,pady=(10,0))
-        tk.Label(window,text='★ 메인 에이전트     S 작은 서브 에이전트',font=('Malgun Gothic',10),bg='#192231',fg='#96a9b5').grid(row=6,column=0,columnspan=3,pady=14)
+            image_label = tk.Label(tile,image=self.pet_frame(pet,0,0,False),bg='#263643')
+            image_label.pack(pady=(12,2))
+            self.catalog_images.append((image_label, pet))
+            tk.Label(tile,text=NAMES[i],bg='#263643',fg='#d7e6ce',font=(MONO_FONT,12,'bold')).pack(padx=44,pady=(0,10))
+        Button(window,text='Clawd 옷장 · 12종 보기',command=self.clawd_catalog,bg='#2b394a',fg='#e9eee7',relief='flat',padx=15,pady=8).grid(row=5,column=0,columnspan=3,pady=(10,0))
+        tk.Label(window,text='★ 메인 에이전트     S 작은 서브 에이전트',font=(UI_FONT,10),bg='#192231',fg='#96a9b5').grid(row=6,column=0,columnspan=3,pady=14)
+        self.button(window, '기본 펫 8종 받기', self.download_pets).grid(row=7,column=0,columnspan=3,pady=(0,8))
+        self.pet_download_status = tk.Label(window,text='공식 서버에서 다운로드 · Hoots는 CLI 배포 목록에 없음',font=(UI_FONT,10),bg='#192231',fg='#96a9b5',wraplength=530)
+        self.pet_download_status.grid(row=8,column=0,columnspan=3,padx=15,pady=(0,14))
 
     def clawd_catalog(self):
         window = tk.Toplevel(self.root)
         window.title('Clawd 옷장 · 12 companions')
         window.configure(bg='#192231')
         window.resizable(False, False)
-        tk.Label(window, text='CLAWD · LITTLE WORKMATES', font=('Consolas', 18, 'bold'), bg='#192231', fg='#e9eee7').pack(padx=24, pady=(20, 6))
-        tk.Label(window, text='같은 세션은 같은 외형 · 작업할 때는 노트북과 함께', font=('Malgun Gothic', 10), bg='#192231', fg='#96a9b5').pack(pady=(0, 12))
+        tk.Label(window, text='CLAWD · LITTLE WORKMATES', font=(MONO_FONT, 18, 'bold'), bg='#192231', fg='#e9eee7').pack(padx=24, pady=(20, 6))
+        tk.Label(window, text='같은 세션은 같은 외형 · 작업할 때는 노트북과 함께', font=(UI_FONT, 10), bg='#192231', fg='#96a9b5').pack(pady=(0, 12))
         canvas = tk.Canvas(window, width=800, height=534, bg='#192231', highlightthickness=0)
         canvas.pack(padx=12, pady=(0, 14))
         for i, (name, shade, accent, icon) in enumerate(CLAWD_VARIANTS):
             left, top = (i % 4) * 200, (i // 4) * 178
             canvas.create_rectangle(left+5, top+5, left+195, top+173, fill='#263643', outline='')
-            canvas.create_text(left+100, top+28, text=f'{i+1:02}  {name}', fill=accent, font=('Malgun Gothic', 11, 'bold'))
+            canvas.create_text(left+100, top+28, text=f'{i+1:02}  {name}', fill=accent, font=(UI_FONT, 11, 'bold'))
             for x, laptop in ((left+52, False), (left+145, True)):
                 def px(l, y, w, h, color, x=x):
                     canvas.create_rectangle(x+l*2.5, top+111+(y-12)*2.5, x+(l+w)*2.5, top+111+(y+h-12)*2.5, fill=color, outline='')
                 draw_clawd(px, i, now=0, state='working' if laptop else 'idle', laptop=laptop)
-            canvas.create_text(left+52, top+148, text='대기', fill='#a4b3b6', font=('Malgun Gothic', 9))
-            canvas.create_text(left+145, top+148, text='작업', fill='#a4b3b6', font=('Malgun Gothic', 9))
+            canvas.create_text(left+52, top+148, text='대기', fill='#a4b3b6', font=(UI_FONT, 9))
+            canvas.create_text(left+145, top+148, text='작업', fill='#a4b3b6', font=(UI_FONT, 9))
 
     def init_office(self):
         self.pet_sheets = {}

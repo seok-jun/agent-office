@@ -2,6 +2,7 @@
 import io
 import json
 import struct
+import sys
 import subprocess
 from functools import lru_cache
 import os
@@ -16,12 +17,16 @@ def candidates(pet, app_dir=None, codex_home=None):
     cache = home / 'cache' / 'tui-pets' / 'v1' / 'assets'
     return [app / 'assets' / (pet + '.png'),
             cache / (pet + '-spritesheet-v4.webp'),
-            cache / (pet + '-spritesheet-v4.png')]
+            cache / (pet + '-spritesheet-v4.png'),
+            app / 'runtime' / 'pets' / (pet + '-spritesheet-v4.webp')]
 
 
 @lru_cache(maxsize=1)
 def desktop_archives():
-    """Query the current user's installed package, without scanning WindowsApps."""
+    """Inspect known local app locations only; never download or scan recursively."""
+    if sys.platform == 'darwin':
+        return tuple(root / 'Codex.app/Contents/Resources/app.asar'
+                     for root in (Path('/Applications'), Path.home() / 'Applications'))
     if os.name != 'nt':
         return ()
     try:

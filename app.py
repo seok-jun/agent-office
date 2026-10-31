@@ -6,6 +6,7 @@ import random
 import threading
 import time
 import tkinter as tk
+from ui_platform import Button, Checkbutton, UI_FONT, MONO_FONT, wheel_units
 from tkinter import messagebox
 from monitor import Monitor, LABELS, RESTING
 from attention import NEEDS_INPUT
@@ -44,7 +45,7 @@ class AgentOffice(Office):
         self.last_error = ''
         header = tk.Frame(self.root, bg=BG)
         header.pack(fill='x', padx=28, pady=(22, 14))
-        tk.Label(header, text='Agent Office', font=('Consolas', 23, 'bold'), fg=INK, bg=BG).pack(side='left')
+        tk.Label(header, text='Agent Office', font=(MONO_FONT, 23, 'bold'), fg=INK, bg=BG).pack(side='left')
         self.toggle = self.button(header, '시연 보기', self.toggle_demo)
         self.toggle.pack(side='right')
         self.button(header, '안내', self.help).pack(side='right', padx=8)
@@ -52,12 +53,12 @@ class AgentOffice(Office):
         self.button(header, 'Clawd 옷장', self.clawd_catalog).pack(side='right', padx=(0, 8))
         toolbar = tk.Frame(self.root, bg=BG)
         toolbar.pack(fill='x', padx=28, pady=(0, 13))
-        self.mode = tk.Label(toolbar, text='●  LOCAL / LIVE', fg=MINT, bg=BG, font=('Consolas', 11, 'bold'))
+        self.mode = tk.Label(toolbar, text='●  LOCAL / LIVE', fg=MINT, bg=BG, font=(MONO_FONT, 11, 'bold'))
         self.mode.pack(side='left')
-        self.count = tk.Label(toolbar, fg=MUTED, bg=BG, font=('Malgun Gothic', 10))
+        self.count = tk.Label(toolbar, fg=MUTED, bg=BG, font=(UI_FONT, 10))
         self.count.pack(side='left', padx=22)
         self.pin = tk.BooleanVar()
-        tk.Checkbutton(toolbar, text='항상 위에', variable=self.pin, command=lambda: self.root.attributes('-topmost', self.pin.get()), fg=MUTED, bg=BG, selectcolor=PANEL, activebackground=BG, activeforeground=INK, font=('Malgun Gothic', 10)).pack(side='right')
+        Checkbutton(toolbar, text='항상 위에', variable=self.pin, command=lambda: self.root.attributes('-topmost', self.pin.get()), fg=MUTED, bg=BG, selectcolor=PANEL, activebackground=BG, activeforeground=INK, font=(UI_FONT, 10)).pack(side='right')
         body = tk.Frame(self.root, bg=BG)
         body.pack(fill='both', expand=True, padx=28)
         self.canvas = tk.Canvas(body, bg='#252e39', highlightthickness=0)
@@ -68,8 +69,8 @@ class AgentOffice(Office):
         sidebar = tk.Frame(body, bg=PANEL, width=260)
         sidebar.pack(side='right', fill='y', padx=(16, 0))
         sidebar.pack_propagate(False)
-        tk.Label(sidebar, text='에이전트', font=('Malgun Gothic', 15, 'bold'), bg=PANEL, fg=INK).pack(anchor='w', padx=19, pady=(20, 5))
-        self.detail = tk.Label(sidebar, text='', justify='left', wraplength=222, font=('Malgun Gothic', 9), fg=MUTED, bg=PANEL)
+        tk.Label(sidebar, text='에이전트', font=(UI_FONT, 15, 'bold'), bg=PANEL, fg=INK).pack(anchor='w', padx=19, pady=(20, 5))
+        self.detail = tk.Label(sidebar, text='', justify='left', wraplength=222, font=(UI_FONT, 9), fg=MUTED, bg=PANEL)
         self.detail.pack(side='bottom', fill='x', padx=18, pady=16)
         listbox = tk.Frame(sidebar, bg=PANEL)
         listbox.pack(fill='both', expand=True, padx=12, pady=10)
@@ -82,10 +83,10 @@ class AgentOffice(Office):
         card_window = self.list_canvas.create_window(0, 0, window=self.cards, anchor='nw')
         self.cards.bind('<Configure>', lambda e: self.list_canvas.configure(scrollregion=self.list_canvas.bbox('all')))
         self.list_canvas.bind('<Configure>', lambda e: self.list_canvas.itemconfigure(card_window, width=e.width))
-        self.root.bind('<MouseWheel>', lambda e: self.list_canvas.yview_scroll(-int(e.delta / 120), 'units'))
+        self.root.bind('<MouseWheel>', self.scroll_cards)
         footer = tk.Frame(self.root, bg=BG)
         footer.pack(fill='x', padx=28, pady=15)
-        self.health = tk.Label(footer, text='로컬 세션을 찾는 중…', font=('Malgun Gothic', 9), fg=MUTED, bg=BG)
+        self.health = tk.Label(footer, text='로컬 세션을 찾는 중…', font=(UI_FONT, 9), fg=MUTED, bg=BG)
         self.health.pack(side='left')
         self.init_office()
         self.drawtag = 'moving'
@@ -99,8 +100,77 @@ class AgentOffice(Office):
             threading.Thread(target=self.poll, daemon=True).start()
         self.root.after(50, self.tick)
 
+    def scroll_cards(self, event):
+        # Restrict scrolling to the list and its child cards.
+        widget = event.widget
+        while widget is not None:
+            if widget == self.list_canvas:
+                units = wheel_units(event.delta, self.root.tk.call('tk', 'windowingsystem'))
+                if units:
+                    self.list_canvas.yview_scroll(units, 'units')
+                return 'break'
+            widget = getattr(widget, 'master', None)
+
     def button(self, parent, text, command):
-        return tk.Button(parent, text=text, command=command, bg='#2b394a', fg=INK, activebackground='#3b4a5c', activeforeground=INK, relief='flat', bd=0, padx=16, pady=8, cursor='hand2', font=('Malgun Gothic', 10))
+        return Button(parent, text=text, command=command, bg='#2b394a', fg=INK, activebackground='#3b4a5c', activeforeground=INK, relief='flat', bd=0, padx=16, pady=8, cursor='hand2', font=(UI_FONT, 10))
+
+    def download_pets(self):
+        if getattr(self, 'pet_download_running', False):
+            return
+        self.pet_download_running = True
+        results = queue.Queue()
+        from pet_downloads import PETS as downloadable, download_pet
+
+        def worker():
+            for pet in downloadable:
+                try:
+                    result = download_pet(pet)
+                    results.put((pet, result, ''))
+                except Exception as exc:
+                    results.put((pet, 'failed', type(exc).__name__))
+            results.put(None)
+
+        completed, failures = [], []
+
+        def status(text):
+            label = getattr(self, 'pet_download_status', None)
+            if label is not None and label.winfo_exists():
+                label.configure(text=text)
+
+        def check():
+            if self.closed.is_set():
+                return
+            while True:
+                try:
+                    result = results.get_nowait()
+                except queue.Empty:
+                    self.root.after(100, check)
+                    return
+                if result is None:
+                    from pet_assets import load_sheet
+                    # Rebuild sprites on the Tk thread without resetting live agents.
+                    self.pet_frames.clear()
+                    for pet in downloadable:
+                        sheet = load_sheet(pet, self.root)
+                        if sheet is not None:
+                            self.pet_sheets[pet] = sheet
+                    for label, pet in getattr(self, 'catalog_images', []):
+                        if label.winfo_exists():
+                            label.configure(image=self.pet_frame(pet,0,0,False))
+                    self.pet_download_running = False
+                    status(f'완료 {len(completed)}/8' + (' · 바로 반영됨' if completed else '') +
+                           (' · 실패: ' + ', '.join(failures) + ' · 버튼으로 재시도' if failures else ''))
+                    return
+                pet, outcome, error = result
+                if outcome == 'failed':
+                    failures.append(pet + ' (' + error + ')')
+                else:
+                    completed.append(pet)
+                status(f'펫 준비 중 {len(completed)+len(failures)}/8…')
+
+        status('공식 서버에서 펫 이미지 받는 중…')
+        threading.Thread(target=worker, daemon=True).start()
+        self.root.after(100, check)
 
     def poll(self):
         next_scan = 0
@@ -150,26 +220,26 @@ class AgentOffice(Office):
         self.card_signature = signature
         for widget in self.cards.winfo_children(): widget.destroy()
         if len(self.team_ids)>1:
-            tk.Label(self.cards,text=f'선택한 팀 · {len(self.team_ids)}명',anchor='w',bg=PANEL,fg=MINT,font=('Malgun Gothic',10,'bold')).pack(fill='x',padx=7,pady=(0,8))
+            tk.Label(self.cards,text=f'선택한 팀 · {len(self.team_ids)}명',anchor='w',bg=PANEL,fg=MINT,font=(UI_FONT,10,'bold')).pack(fill='x',padx=7,pady=(0,8))
         attention = [s for s in states if s['state'] in NEEDS_INPUT]
         working = [s for s in states if s['state'] in ('working', 'thinking', 'compacting')]
         waiting = [s for s in states if s['state'] not in NEEDS_INPUT | {'working', 'thinking', 'compacting'}]
-        tk.Label(self.cards, text=f'!  내 응답 필요  {len(attention)}', anchor='w', bg='#3e3440' if attention else PANEL, fg='#f0c38e' if attention else MUTED, font=('Malgun Gothic', 11, 'bold'), padx=7, pady=9).pack(fill='x', pady=(0,5))
+        tk.Label(self.cards, text=f'!  내 응답 필요  {len(attention)}', anchor='w', bg='#3e3440' if attention else PANEL, fg='#f0c38e' if attention else MUTED, font=(UI_FONT, 11, 'bold'), padx=7, pady=9).pack(fill='x', pady=(0,5))
         for s in attention: self.session_card(s)
-        tk.Label(self.cards, text=f'●  작업 중  {len(working)}', anchor='w', bg=PANEL, fg=MINT, font=('Malgun Gothic', 11, 'bold')).pack(fill='x', padx=7, pady=(8, 7))
+        tk.Label(self.cards, text=f'●  작업 중  {len(working)}', anchor='w', bg=PANEL, fg=MINT, font=(UI_FONT, 11, 'bold')).pack(fill='x', padx=7, pady=(8, 7))
         for s in working: self.session_card(s)
         if not working:
-            tk.Label(self.cards, text='작업 중인 에이전트 없음', anchor='w', bg=PANEL, fg=MUTED, font=('Malgun Gothic', 9)).pack(fill='x', padx=7, pady=(2, 14))
+            tk.Label(self.cards, text='작업 중인 에이전트 없음', anchor='w', bg=PANEL, fg=MUTED, font=(UI_FONT, 9)).pack(fill='x', padx=7, pady=(2, 14))
         arrow = '▸' if self.waiting_collapsed else '▾'
-        tk.Button(self.cards, text=f'{arrow}  대기 중  {len(waiting)}', command=self.toggle_waiting, anchor='w', bg='#283443', fg=INK, activebackground='#344455', activeforeground=INK, relief='flat', bd=0, padx=10, pady=9, cursor='hand2', font=('Malgun Gothic', 11, 'bold')).pack(fill='x', pady=(14, 5))
+        Button(self.cards, text=f'{arrow}  대기 중  {len(waiting)}', command=self.toggle_waiting, anchor='w', bg='#283443', fg=INK, activebackground='#344455', activeforeground=INK, relief='flat', bd=0, padx=10, pady=9, cursor='hand2', font=(UI_FONT, 11, 'bold')).pack(fill='x', pady=(14, 5))
         if not self.waiting_collapsed:
             for s in waiting: self.session_card(s)
             if not waiting:
-                tk.Label(self.cards, text='대기 없음', anchor='w', bg=PANEL, fg=MUTED, font=('Malgun Gothic', 9)).pack(fill='x', padx=7, pady=8)
+                tk.Label(self.cards, text='대기 없음', anchor='w', bg=PANEL, fg=MUTED, font=(UI_FONT, 9)).pack(fill='x', padx=7, pady=8)
         active = sum(s['state'] in ('working', 'thinking', 'compacting') for s in states)
         self.count.configure(text=f"{len(states)}명 입실   ·   {active}명 작업 중   ·   {len(attention)}명 응답 필요")
         if not states:
-            tk.Label(self.cards, text='아직 입실한 에이전트가 없어요.\n\nClaude Code 또는 Codex에서\n작업을 시작해 보세요.\n\n시연 보기로 움직임을\n먼저 구경할 수도 있어요.', bg=PANEL, fg=MUTED, justify='left', font=('Malgun Gothic', 10)).pack(pady=32)
+            tk.Label(self.cards, text='아직 입실한 에이전트가 없어요.\n\nClaude Code 또는 Codex에서\n작업을 시작해 보세요.\n\n시연 보기로 움직임을\n먼저 구경할 수도 있어요.', bg=PANEL, fg=MUTED, justify='left', font=(UI_FONT, 10)).pack(pady=32)
 
     def toggle_waiting(self):
         self.waiting_collapsed = not self.waiting_collapsed
@@ -181,13 +251,13 @@ class AgentOffice(Office):
         nickname = NAMES[pet] if s['provider'] == 'Codex' else 'Clawd · ' + ACCESSORIES[variant]
         row = tk.Frame(self.cards, bg='#304c49' if s['id'] in self.team_ids else '#332e3c' if s['state'] in NEEDS_INPUT else PANEL, highlightthickness=1 if s['id'] in self.team_ids else 0, highlightbackground=MINT)
         row.pack(fill='x', pady=2)
-        label = tk.Label(row, text=f"{'↳' if s['subagent'] else '★'} {nickname} · {s['short']}", anchor='w', bg=row['bg'], fg=color, font=('Consolas', 10, 'bold'), cursor='hand2')
+        label = tk.Label(row, text=f"{'↳' if s['subagent'] else '★'} {nickname} · {s['short']}", anchor='w', bg=row['bg'], fg=color, font=(MONO_FONT, 10, 'bold'), cursor='hand2')
         label.pack(fill='x', padx=7, pady=(3, 0))
         suffix = ''
-        sub = tk.Label(row, text=f"{s['provider']} · {LABELS[s['state']]}{suffix}", anchor='w', bg=row['bg'], fg=MUTED, font=('Malgun Gothic', 9), cursor='hand2')
+        sub = tk.Label(row, text=f"{s['provider']} · {LABELS[s['state']]}{suffix}", anchor='w', bg=row['bg'], fg=MUTED, font=(UI_FONT, 9), cursor='hand2')
         sub.pack(fill='x', padx=7, pady=(0, 3))
         if s['state'] in NEEDS_INPUT and s.get('attention_hint'):
-            tk.Label(row,text=s['attention_hint'],wraplength=195,justify='left',anchor='w',bg=row['bg'],fg='#e7cbb0',font=('Malgun Gothic',9)).pack(fill='x',padx=7,pady=(0,5))
+            tk.Label(row,text=s['attention_hint'],wraplength=195,justify='left',anchor='w',bg=row['bg'],fg='#e7cbb0',font=(UI_FONT,9)).pack(fill='x',padx=7,pady=(0,5))
         for widget in (row, label, sub):
             widget.bind('<Button-1>', lambda e, key=s['id']: self.select(key))
             widget.bind('<Enter>', lambda e, key=s['id']: setattr(self, 'hover_row', key))
@@ -236,7 +306,7 @@ class AgentOffice(Office):
         return self.canvas.create_rectangle(self.ox+x*self.scale, self.oy+y*self.scale, self.ox+(x+w)*self.scale, self.oy+(y+h)*self.scale, fill=color, outline=outline, width=1, tags=self.drawtag)
 
     def text(self, x, y, content, color=INK, size=10, anchor='center'):
-        self.canvas.create_text(self.ox+x*self.scale, self.oy+y*self.scale, text=content, fill=color, font=('Malgun Gothic', max(8, int(size*self.scale))), anchor=anchor, tags=self.drawtag)
+        self.canvas.create_text(self.ox+x*self.scale, self.oy+y*self.scale, text=content, fill=color, font=(UI_FONT, max(8, int(size*self.scale))), anchor=anchor, tags=self.drawtag)
 
     def plant(self, x, y):
         self.rect(x+5,y+20,16,15,'#be8e71'); self.rect(x+2,y+18,22,5,'#e1ad83')
