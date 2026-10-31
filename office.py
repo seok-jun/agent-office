@@ -61,8 +61,23 @@ class Office(Routines):
             cloud(0,0,fill,border)
             self.canvas.create_text(self.ox+(left+width/2)*self.scale,self.oy+(top+height/2)*self.scale,text=message,fill='#756581' if sleeping else '#526e5c',font=(UI_FONT,max(8,int(9*self.scale))),width=(width-22)*self.scale,justify='center',tags='moving')
 
+    def catalog_window(self, key):
+        if not hasattr(self, 'catalog_windows'):
+            self.catalog_windows = {}
+        window = self.catalog_windows.get(key)
+        if window is not None and window.winfo_exists():
+            window.deiconify()
+            window.lift()
+            window.focus_set()
+            return window, False
+        window = tk.Toplevel(self.root)
+        self.catalog_windows[key] = window
+        return window, True
+
     def pet_catalog(self):
-        window=tk.Toplevel(self.root)
+        window, created = self.catalog_window('pets')
+        if not created:
+            return
         window.title('펫 도감 · 9 companions')
         window.configure(bg='#192231')
         window.resizable(False,False)
@@ -84,7 +99,9 @@ class Office(Routines):
         self.pet_download_status.grid(row=8,column=0,columnspan=3,padx=15,pady=(0,14))
 
     def clawd_catalog(self):
-        window = tk.Toplevel(self.root)
+        window, created = self.catalog_window('clawd')
+        if not created:
+            return
         window.title('Clawd 옷장 · 12 companions')
         window.configure(bg='#192231')
         window.resizable(False, False)

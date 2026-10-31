@@ -355,10 +355,27 @@ class AgentOffice(Office):
         self.root.after(40,self.tick)
 
     def help(self):
-        roots = '\n'.join(f'{k}: {v}' for k,v in self.monitor.roots.items())
-        signals = '\n'.join(f'{name}: '+(time.strftime('%H:%M:%S',time.localtime(at))+' 신호 수신' if at else '신호 대기') for name in ('Claude','Codex') for at in [self.monitor.compaction.last_received.get(name,0)])
-        roots += '\n\n압축 연결 (0.2초 간격)\n'+signals+'\n압축 시작 → 커피 / 완료 → 책상\n새 훅이 반영되지 않으면 Claude/Codex 세션을 재개하세요.'
-        messagebox.showinfo('Agent Office 사용 안내', 'Claude Code와 Codex의 로컬 JSONL 기록을 읽는 관찰용 앱입니다.\n\n작업/생각 → 책상으로 이동\n완료 → 라운지 산책\n3분간 새 상태 기록 없음 → 상태 미확인\n\n도구의 파일명·명령 종류와 공개 진행 메시지를 로컬 화면에 표시합니다. 원문 기록을 별도로 저장하거나 전송하지 않습니다. 에이전트를 실행하거나 작업을 변경하지 않습니다.\n\n최근 24시간 기록 중 최신 48개를 확인하고 작업 중인 세션을 우선해 최대 12개 표시합니다. 기록 형식 변경이나 기록을 남기지 않는 앱은 감지되지 않을 수 있습니다. 질문/승인 요청은 명시적 요청 기록이 있을 때 감지합니다. 요청을 기록하지 않는 앱/버전의 승인 창은 감지되지 않을 수 있습니다. 응답은 원래 앱에서 해 주세요.\n\n폴더 변경: CODEX_HOME / CLAUDE_CONFIG_DIR 환경변수를 설정한 뒤 다시 실행하세요.\n\n'+roots)
+        messagebox.showinfo(
+            'Agent Office 사용 안내',
+            '시작하기\n'
+            'Claude Code나 Codex에서 작업하면 에이전트가 사무실에 나타납니다.\n\n'
+            '상태 보기\n'
+            '• 작업 중: 책상에서 일해요.\n'
+            '• 질문·승인 대기: 내 자리 앞에서 기다려요.\n'
+            '• 완료: 라운지에서 쉬어요.\n'
+            '• 압축 중: 훅 연결이 되어 있으면 커피 코너로 이동해요.\n\n'
+            '화면 사용하기\n'
+            '• 캐릭터나 목록을 클릭하면 상태와 연결된 팀을 볼 수 있어요.\n'
+            '• 시연 보기: 가상 에이전트로 움직임을 구경해요.\n'
+            '• 펫 도감: 캐릭터를 보고 기본 펫 8종을 받을 수 있어요.\n'
+            '• Clawd 옷장: Claude 캐릭터 12종을 볼 수 있어요.\n'
+            '• 항상 위에: 다른 창 위에 사무실을 띄워 둡니다.\n\n'
+            '알아두기\n'
+            '질문 답변과 작업 승인은 원래 Claude·Codex에서 해 주세요.\n'
+            '캐릭터가 없으면 해당 도구에서 작업을 시작해 보세요.\n'
+            '펫이 로봇으로 보이면 펫 도감에서 기본 펫을 받아 주세요.',
+            parent=self.root,
+        )
 
     def close(self):
         self.closed.set()
