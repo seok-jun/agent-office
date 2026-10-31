@@ -7,6 +7,7 @@ import tkinter as tk
 import time
 from pet_assets import load_sheet
 from companions import robot_frame
+from clawd import VARIANTS as CLAWD_VARIANTS, draw_clawd, bounce as clawd_bounce
 from monitor import RESTING, LABELS, wake_message
 from attention import NEEDS_INPUT
 from routines import Routines
@@ -15,12 +16,13 @@ PETS = ['codex', 'dewey', 'fireball', 'hoots', 'rocky', 'seedy', 'stacky', 'bsod
 NAMES = ['Codex', 'Dewey', 'Fireball', 'Hoots', 'Rocky', 'Seedy', 'Stacky', 'BSOD', 'Null Signal']
 COUNTS = [6, 8, 8, 4, 5, 8, 6, 6, 6]
 ACCENTS = ['#9fd8cb', '#e6bc76', '#b8ace2', '#92bcdf', '#dba8b9', '#bad194']
-ACCESSORIES = ['헤드셋', '안경', '리본', '캡', '스카프', '백팩']
+ACCESSORIES = [variant[0] for variant in CLAWD_VARIANTS]
 
 def identity(session):
     seed = int(hashlib.sha256(session['id'].encode()).hexdigest()[:12], 16)
     # Assignment is stable between refreshes and app restarts.
-    return seed % len(PETS), (seed // 9) % 6
+    variants = len(CLAWD_VARIANTS) if session.get('provider') == 'Claude' else len(ACCENTS)
+    return seed % len(PETS), (seed // 9) % variants
 
 class Office(Routines):
     WORLD_W, WORLD_H = 1000, 760
@@ -71,7 +73,28 @@ class Office(Routines):
             tile.grid_propagate(False)
             tk.Label(tile,image=self.pet_frame(pet,0,0,False),bg='#263643').pack(pady=(12,2))
             tk.Label(tile,text=NAMES[i],bg='#263643',fg='#d7e6ce',font=('Consolas',12,'bold')).pack(padx=44,pady=(0,10))
-        tk.Label(window,text='Claude: Clawd 스타일 도트 캐릭터 + 6가지 액세서리\n★ 메인 에이전트     S 작은 서브 에이전트',font=('Malgun Gothic',10),bg='#192231',fg='#96a9b5').grid(row=5,column=0,columnspan=3,pady=20)
+        tk.Button(window,text='Clawd 옷장 · 12종 보기',command=self.clawd_catalog,bg='#2b394a',fg='#e9eee7',relief='flat',padx=15,pady=8).grid(row=5,column=0,columnspan=3,pady=(10,0))
+        tk.Label(window,text='★ 메인 에이전트     S 작은 서브 에이전트',font=('Malgun Gothic',10),bg='#192231',fg='#96a9b5').grid(row=6,column=0,columnspan=3,pady=14)
+
+    def clawd_catalog(self):
+        window = tk.Toplevel(self.root)
+        window.title('Clawd 옷장 · 12 companions')
+        window.configure(bg='#192231')
+        window.resizable(False, False)
+        tk.Label(window, text='CLAWD · LITTLE WORKMATES', font=('Consolas', 18, 'bold'), bg='#192231', fg='#e9eee7').pack(padx=24, pady=(20, 6))
+        tk.Label(window, text='같은 세션은 같은 외형 · 작업할 때는 노트북과 함께', font=('Malgun Gothic', 10), bg='#192231', fg='#96a9b5').pack(pady=(0, 12))
+        canvas = tk.Canvas(window, width=800, height=534, bg='#192231', highlightthickness=0)
+        canvas.pack(padx=12, pady=(0, 14))
+        for i, (name, shade, accent, icon) in enumerate(CLAWD_VARIANTS):
+            left, top = (i % 4) * 200, (i // 4) * 178
+            canvas.create_rectangle(left+5, top+5, left+195, top+173, fill='#263643', outline='')
+            canvas.create_text(left+100, top+28, text=f'{i+1:02}  {name}', fill=accent, font=('Malgun Gothic', 11, 'bold'))
+            for x, laptop in ((left+52, False), (left+145, True)):
+                def px(l, y, w, h, color, x=x):
+                    canvas.create_rectangle(x+l*2.5, top+111+(y-12)*2.5, x+(l+w)*2.5, top+111+(y+h-12)*2.5, fill=color, outline='')
+                draw_clawd(px, i, now=0, state='working' if laptop else 'idle', laptop=laptop)
+            canvas.create_text(left+52, top+148, text='대기', fill='#a4b3b6', font=('Malgun Gothic', 9))
+            canvas.create_text(left+145, top+148, text='작업', fill='#a4b3b6', font=('Malgun Gothic', 9))
 
     def init_office(self):
         self.pet_sheets = {}
@@ -290,7 +313,7 @@ class Office(Routines):
         if lounging: y += 4
         sleeping=s['state'] in RESTING and not walking
         if sleeping: y += 7 + math.sin(now*1.7)*1.5
-        sub=s['subagent']; accent=ACCENTS[variant]
+        sub=s['subagent']; accent=CLAWD_VARIANTS[variant][2] if s['provider']=='Claude' else ACCENTS[variant]
         r,t=self.rect,self.text
         if s['id'] in self.team_ids:
             self.canvas.create_oval(self.ox+(x-32)*self.scale,self.oy+(y-51)*self.scale,self.ox+(x+32)*self.scale,self.oy+(y+16)*self.scale,fill='',outline='#93dfb1',width=3 if s['id']==self.team_root else 2,tags='moving')
@@ -305,30 +328,16 @@ class Office(Routines):
             self.canvas.create_image(self.ox+x*self.scale,self.oy+(y-18)*self.scale,image=picture,tags='moving')
             name=NAMES[pet]
         else:
-            # Clawd-inspired native pixel crab, with six wardrobe variations.
+            # Native pixel wardrobe uses the same drawing code as its catalog.
             unit=2 if sub else 2.6
-            shade=['#d58c6e','#d49c7c','#ce997e','#e2aa88','#bc8b78','#d99d86'][variant]
-            bounce=(int(now*8)%2)*2 if walking else math.sin(now*3)*1
+            laptop = s['state'] in ('working','thinking') and not walking and not a.get('routine_label') and not a.get('coffee_phase') and not a.get('report_parent')
+            bounce=clawd_bounce(now, walking, laptop)
             def px(l,top,w,h,c): r(x+l*unit,y+(top-12)*unit-bounce,w*unit,h*unit,c)
-            px(-8,-2,16,11,shade); px(-10,0,2,7,shade); px(8,0,2,7,shade)
-            px(-6,-4,12,2,shade); px(-5,1,2,3,'#322e32'); px(3,1,2,3,'#322e32')
-            if sleeping:
-                px(-5,1,2,3,shade); px(3,1,2,3,shade)
-                px(-6,3,3,1,'#554039'); px(3,3,3,1,'#554039')
-            px(-12,4,3,3,shade); px(9,4,3,3,shade)
-            for leg in (-7,-3,2,6): px(leg,9,2,3+(int(now*8+leg)%2 if walking else 0),shade)
-            if variant==0: # headphones
-                px(-9,-4,18,2,'#596879'); px(-11,-2,3,7,'#596879'); px(8,-2,3,7,'#596879')
-            elif variant==1: # glasses
-                px(-7,0,6,1,'#4c5059'); px(1,0,6,1,'#4c5059'); px(-1,2,2,1,'#4c5059'); px(-7,4,6,1,'#4c5059'); px(1,4,6,1,'#4c5059')
-            elif variant==2: px(5,-6,4,4,accent); px(9,-7,3,5,accent)
-            elif variant==3: px(-6,-6,12,3,accent); px(-8,-3,19,2,accent)
-            elif variant==4: px(-8,7,16,2,accent); px(4,9,3,5,accent)
-            else: px(8,2,4,7,accent)
+            draw_clawd(px, variant, now, walking, sleeping, s['state'], laptop)
             name='Clawd'
         # Side accessories don't obscure the official pet artwork.
         r(x+23,y-14,13,14,accent)
-        t(x+29,y-7,['♫','⌕','✦','▰','≈','▣'][variant],'#344b50',9)
+        t(x+29,y-7,CLAWD_VARIANTS[variant][3] if s['provider']=='Claude' else ['♫','⌕','✦','▰','≈','▣'][variant],'#344b50',9)
         if not sub:
             r(x-27,y-46,16,14,'#e8cc80'); t(x-19,y-39,'★','#77613a',9)
         else:
@@ -341,7 +350,7 @@ class Office(Routines):
             t(x+18,cup_y-8,'~','#e8e5d5',9)
         if a.get('report_parent'):
             r(x+12,y-4,12,15,'#f7edcd');r(x+15,y,6,2,'#93a79b')
-        if not walking and s['state']=='working':
+        if s['provider']=='Codex' and not walking and s['state']=='working':
             r(x-15,y+4,30,5,'#64777b')
             for n in range(4): r(x-11+n*6,y+5,3,2,'#c9dfc3' if int(now*8+n)%2 else '#9bab9a')
         if lounging:

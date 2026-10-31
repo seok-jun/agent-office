@@ -49,6 +49,7 @@ class AgentOffice(Office):
         self.toggle.pack(side='right')
         self.button(header, '안내', self.help).pack(side='right', padx=8)
         self.button(header, '펫 도감', self.pet_catalog).pack(side='right')
+        self.button(header, 'Clawd 옷장', self.clawd_catalog).pack(side='right', padx=(0, 8))
         toolbar = tk.Frame(self.root, bg=BG)
         toolbar.pack(fill='x', padx=28, pady=(0, 13))
         self.mode = tk.Label(toolbar, text='●  LOCAL / LIVE', fg=MINT, bg=BG, font=('Consolas', 11, 'bold'))
@@ -175,7 +176,7 @@ class AgentOffice(Office):
     def session_card(self, s):
         color = MINT if s['provider'] == 'Codex' else PEACH
         pet, variant = identity(s)
-        nickname = NAMES[pet] if s['provider'] == 'Codex' else 'Clawd'
+        nickname = NAMES[pet] if s['provider'] == 'Codex' else 'Clawd · ' + ACCESSORIES[variant]
         row = tk.Frame(self.cards, bg='#304c49' if s['id'] in self.team_ids else '#332e3c' if s['state'] in NEEDS_INPUT else PANEL, highlightthickness=1 if s['id'] in self.team_ids else 0, highlightbackground=MINT)
         row.pack(fill='x', pady=2)
         label = tk.Label(row, text=f"{'↳' if s['subagent'] else '★'} {nickname} · {s['short']}", anchor='w', bg=row['bg'], fg=color, font=('Consolas', 10, 'bold'), cursor='hand2')
