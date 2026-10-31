@@ -138,6 +138,8 @@ class AgentOffice(Office):
         rows = [dict(id=self.demo_ids[i], provider='Codex' if i < 9 else 'Claude', state=modes[(i+t) % len(modes)], updated=time.time(), project=['웹사이트', '테스트', '리뷰', '문서', 'API', '디자인'][i%6], subagent=i%3 != 0, short='DEMO '+str(i+1)) for i in range(12)]
         for i,s in enumerate(rows):
             if s['subagent']:s['parent_id']=rows[(i//3)*3]['id']
+        # Include an explicit Claude-to-Codex delegation in the fictional preview.
+        rows[7]['parent_id']=rows[9]['id']
         return rows
 
     def refresh_cards(self, force=False):
@@ -214,6 +216,9 @@ class AgentOffice(Office):
             stamp = time.strftime('%H:%M:%S', time.localtime(s['updated'])) if s['updated'] else '알 수 없음'
             hint = '\n'+s['reset_hint'] if s.get('reset_hint') else ''
             if s['state'] in NEEDS_INPUT: hint='\n'+(s.get('attention_hint') or '원래 Claude / Codex 창에서 응답해 주세요.')
+            parent = next((p for p in self.states() if p['id']==s.get('parent_id')), None)
+            if parent:
+                hint += f"\n호출자: {parent['provider']} · {parent['short']}"
             self.detail.configure(text=f"{s['provider']} · {'하위 에이전트' if s['subagent'] else '세션'}\n{s['project']}\n마지막 상태 기록 {stamp}\n{LABELS[s['state']]}{' · 시연' if self.demo else ' · 기록 기반'}{hint}")
         self.refresh_cards(force=True)
 

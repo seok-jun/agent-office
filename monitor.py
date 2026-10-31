@@ -7,6 +7,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from attention import Attention, NEEDS_INPUT
 from live_compaction import LiveCompaction
+from delegation import Delegations, connect_delegations
+from team import visible_sessions
 
 LABELS = {'working': '작업 중', 'thinking': '생각 중', 'done': '완료', 'waiting': '승인 대기', 'unknown': '상태 미확인', 'error': '오류'}
 LABELS.update(paused='중단 · 쉬는 중', quota_limited='사용량 제한 · 쉬는 중', rate_limited='요청 속도 제한 · 대기')
@@ -247,6 +249,7 @@ class Tail:
         self.session_id = path.stem
         self.parent_session_id = path.parent.parent.name if 'subagents' in path.parts else ''
         self.compacted_at = 0
+        self.delegations = Delegations(path)
 
     def metadata(self,event):
         p=event.get('payload') or {}
@@ -260,6 +263,7 @@ class Tail:
         elif self.provider=='Claude':
             if self.subagent:self.session_id=event.get('agentId',self.session_id)
             else:self.session_id=event.get('sessionId',self.session_id)
+            self.delegations.consume(event, timestamp(event.get('timestamp'), 0))
 
     def read(self):
         stat = self.path.stat()
@@ -273,15 +277,20 @@ class Tail:
             self.activity = ''
             self.attention = Attention()
             self.compacted_at = 0
+            self.delegations = Delegations(self.path)
         with self.path.open('rb') as f:
             if self.offset == 0:
                 # Metadata is at the head even when history is larger than the tail limit.
                 # Rotated Codex rollouts put a large replacement-history compaction
                 # directly after metadata. It may straddle the bounded tail window.
-                for line in f.read(4194304).splitlines()[:8]:
+                for index, line in enumerate(f.read(4194304).splitlines()):
+                    if index >= 8 and self.provider != 'Claude':
+                        break
                     try:
                         meta = json.loads(line)
                         if isinstance(meta,dict):self.metadata(meta)
+                        if index >= 8:
+                            continue
                         if isinstance(meta,dict) and compaction_finished(meta):
                             self.compacted_at=timestamp(meta.get('timestamp'),stat.st_mtime)
                             self.state='thinking'
@@ -405,6 +414,8 @@ class Monitor:
             tail = self.tails.setdefault(key, Tail(path, provider))
             try: tail.read()
             except OSError: self.errors.append(provider + ': 세션 읽기 실패')
+            if provider == 'Claude':
+                tail.delegations.refresh()
         self.tails = {k: v for k, v in self.tails.items() if k in keep}
         return self.snapshot(now)
 
@@ -414,12 +425,6 @@ class Monitor:
         lookup={(s['provider'],s['session_id']):s['id'] for s in states if not s['subagent']}
         lookup.update({(s['provider'],s['session_id']):s['id'] for s in states if s['subagent']})
         for s in states:s['parent_id']=lookup.get((s['provider'],s['parent_session_id']))
+        connect_delegations(states, self.tails)
         states.sort(key=lambda v: (2 if v['state'] in NEEDS_INPUT else 1 if v['state'] in ('thinking', 'working','compacting') else 0, v['updated']), reverse=True)
-        selected=states[:12]
-        by_id={s['id']:s for s in states}
-        for s in list(selected):
-            parent=by_id.get(s.get('parent_id'))
-            if parent and parent not in selected and s['state']=='done' and now-s['updated']<120:
-                replace=next((v for v in reversed(selected) if v['state'] not in NEEDS_INPUT|{'working','thinking','compacting'} and v is not s and not any(c.get('parent_id')==v['id'] for c in selected)),None)
-                if replace:selected[selected.index(replace)]=parent
-        return selected
+        return visible_sessions(states)
